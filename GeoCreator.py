@@ -1,10 +1,9 @@
 import hou
 from PySide2 import QtCore, QtUiTools, QtWidgets
 
-
 class GeoCreator(QtWidgets.QWidget):
     def __init__(self):
-        super(GeoCreator,self).__init__()
+        super(GeoCreator, self).__init__()
         ui_file = '/Users/stephaniestelzer/Documents/HoudiniPlugins/FireStarter/StarterUI.ui'
         self.ui = QtUiTools.QUiLoader().load(ui_file, parentWidget=self)
         self.setParent(hou.ui.mainQtWindow(), QtCore.Qt.Window)
@@ -14,24 +13,29 @@ class GeoCreator(QtWidgets.QWidget):
         
     def buttonClicked(self):
         customName = self.ui.lin_name.text()
+        
         # Execute node creation 
-        if checkExisting(customName) != True:
-            createGeoNode(customName)
+        if not self.checkExisting(customName):
+            self.createGeoNode(customName)
     
     def checkExisting(self, geometryName):
-        # Check if "MY_GEO" exists
+        # Check if the specified node exists
         if hou.node('/obj/{}'.format(geometryName)):
             # Display fail message
             hou.ui.displayMessage('{} already exists in the scene'.format(geometryName))
-            return True    
+            return True
+        return False  # Return False if the node doesn't exist
 
     def createGeoNode(self, geometryName):
         # Get scene root node
         sceneRoot = hou.node('/obj/')
-        # Create empty geometry node in scene root
-        geometry = sceneRoot.createNode('geo', run_init_scripts=False)
-        # Set geometry node name
-        geometry.setName(geometryName)
+        
+        # Create a subnet node (change 'subnet' to 'geo' if you want a geometry node)
+        geo_subnet = sceneRoot.createNode('subnet')
+        
+        # Set subnet node name
+        geo_subnet.setName(geometryName)
+        
         # Display creation message
         hou.ui.displayMessage('{} node created!'.format(geometryName))
 
