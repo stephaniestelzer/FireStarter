@@ -1,23 +1,37 @@
 import hou
 from PySide2 import QtCore, QtUiTools, QtWidgets
 
-class GeoCreator(QtWidgets.QWidget):
+class FireStarter(QtWidgets.QWidget):
     def __init__(self):
-        super(GeoCreator, self).__init__()
-        ui_file = '/Users/stephaniestelzer/Documents/HoudiniPlugins/FireStarter/StarterUI.ui'
+        super(FireStarter, self).__init__()
+        ui_file = '/Users/stephaniestelzer/Documents/HoudiniPlugins/FireStarter/SmallerUI.ui'
         self.ui = QtUiTools.QUiLoader().load(ui_file, parentWidget=self)
         self.setParent(hou.ui.mainQtWindow(), QtCore.Qt.Window)
         
         # Setup "Create Geometry" button
         self.ui.btn_create.clicked.connect(self.buttonClicked)
+        self
+
+        # Simulation Path
+        self.hip_file_path = "/Users/stephaniestelzer/Desktop/Basic_Simulation.hipnc"
         
     def buttonClicked(self):
-        customName = self.ui.lin_name.text()
+        # customName = "campfire"
+        # print("accessed")
         
-        # Execute node creation 
-        if not self.checkExisting(customName):
-            self.createGeoNode(customName)
-    
+        # hou.hipFile.load(self.hip_file_path, suppress_save_prompt=True)  # Fix typo here
+
+        # network_name = "FireStarter"
+        # geometry_network = hou.node("/obj").node(network_name)
+
+        # # Create a copy of the network in the current scene
+        # new_object = hou.node("/obj").createNode("geo", "Fire_Starter")
+        # geometry_network.copyItemsTo(new_object)
+        hou.hipFile.load(self.hip_file_path, suppress_save_prompt=True)
+
+        network_name = "FireStarter"
+        geometry_network = hou.node("/obj").node(network_name)
+      
     def checkExisting(self, geometryName):
         # Check if the specified node exists
         if hou.node('/obj/{}'.format(geometryName)):
@@ -40,5 +54,5 @@ class GeoCreator(QtWidgets.QWidget):
         hou.ui.displayMessage('{} node created!'.format(geometryName))
 
 def run():
-    win = GeoCreator()
+    win = FireStarter()
     win.show()
