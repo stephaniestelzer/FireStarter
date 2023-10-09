@@ -23,73 +23,8 @@
     </rect>
    </property>
    <layout class="QGridLayout" name="gridLayout">
-    <item row="4" column="0">
-     <widget class="QLabel" name="label_4">
-      <property name="font">
-       <font>
-        <pointsize>22</pointsize>
-       </font>
-      </property>
-      <property name="text">
-       <string>Steady Burn</string>
-      </property>
-     </widget>
-    </item>
-    <item row="6" column="0">
-     <widget class="QLabel" name="label_5">
-      <property name="font">
-       <font>
-        <pointsize>22</pointsize>
-       </font>
-      </property>
-      <property name="text">
-       <string>Taper</string>
-      </property>
-     </widget>
-    </item>
-    <item row="6" column="1">
-     <widget class="QSlider" name="horizontalSlider">
-      <property name="orientation">
-       <enum>Qt::Horizontal</enum>
-      </property>
-     </widget>
-    </item>
-    <item row="3" column="2">
-     <widget class="QLabel" name="label_2">
-      <property name="font">
-       <font>
-        <pointsize>22</pointsize>
-       </font>
-      </property>
-      <property name="text">
-       <string>ms</string>
-      </property>
-     </widget>
-    </item>
-    <item row="3" column="0">
-     <widget class="QLabel" name="label">
-      <property name="font">
-       <font>
-        <pointsize>22</pointsize>
-       </font>
-      </property>
-      <property name="text">
-       <string>Duration</string>
-      </property>
-     </widget>
-    </item>
-    <item row="3" column="1">
-     <widget class="QLineEdit" name="lineEdit"/>
-    </item>
-    <item row="4" column="1">
-     <widget class="QCheckBox" name="checkBox">
-      <property name="text">
-       <string/>
-      </property>
-     </widget>
-    </item>
     <item row="1" column="0" colspan="3">
-     <widget class="QComboBox" name="comboBox">
+     <widget class="QComboBox" name="simulationType">
       <property name="sizePolicy">
        <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
         <horstretch>0</horstretch>
@@ -122,6 +57,83 @@
       </property>
       <property name="autoRaise">
        <bool>true</bool>
+      </property>
+     </widget>
+    </item>
+    <item row="3" column="0">
+     <widget class="QLabel" name="label">
+      <property name="font">
+       <font>
+        <pointsize>22</pointsize>
+       </font>
+      </property>
+      <property name="text">
+       <string>Duration</string>
+      </property>
+     </widget>
+    </item>
+    <item row="6" column="0">
+     <widget class="QLabel" name="label_5">
+      <property name="font">
+       <font>
+        <pointsize>22</pointsize>
+       </font>
+      </property>
+      <property name="text">
+       <string>Taper</string>
+      </property>
+     </widget>
+    </item>
+    <item row="3" column="1">
+     <widget class="QLineEdit" name="durationInput">
+      <property name="font">
+       <font>
+        <family>.AppleSystemUIFont</family>
+       </font>
+      </property>
+     </widget>
+    </item>
+    <item row="4" column="1">
+     <widget class="QCheckBox" name="burnCheckBox">
+      <property name="enabled">
+       <bool>true</bool>
+      </property>
+      <property name="text">
+       <string/>
+      </property>
+      <property name="checked">
+       <bool>true</bool>
+      </property>
+     </widget>
+    </item>
+    <item row="3" column="2">
+     <widget class="QLabel" name="label_2">
+      <property name="font">
+       <font>
+        <pointsize>22</pointsize>
+       </font>
+      </property>
+      <property name="text">
+       <string>frames</string>
+      </property>
+     </widget>
+    </item>
+    <item row="4" column="0">
+     <widget class="QLabel" name="label_4">
+      <property name="font">
+       <font>
+        <pointsize>22</pointsize>
+       </font>
+      </property>
+      <property name="text">
+       <string>Steady Burn</string>
+      </property>
+     </widget>
+    </item>
+    <item row="6" column="1">
+     <widget class="QSlider" name="taperSlider">
+      <property name="orientation">
+       <enum>Qt::Horizontal</enum>
       </property>
      </widget>
     </item>

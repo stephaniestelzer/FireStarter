@@ -10,27 +10,149 @@ class FireStarter(QtWidgets.QWidget):
         
         # Setup "Create Geometry" button
         self.ui.btn_create.clicked.connect(self.buttonClicked)
-        self
-
-        # Simulation Path
-        self.hip_file_path = "/Users/stephaniestelzer/Desktop/Basic_Simulation.hipnc"
+        # self.ui.durationInput.
+        self.ui.taperSlider.valueChanged[int].connect(self.adjustTaper)
+        self.ui.burnCheckBox.toggled.connect(self.steadyBurnToggle)
         
     def buttonClicked(self):
-        # customName = "campfire"
-        # print("accessed")
-        
-        # hou.hipFile.load(self.hip_file_path, suppress_save_prompt=True)  # Fix typo here
-
-        # network_name = "FireStarter"
-        # geometry_network = hou.node("/obj").node(network_name)
-
-        # # Create a copy of the network in the current scene
-        # new_object = hou.node("/obj").createNode("geo", "Fire_Starter")
-        # geometry_network.copyItemsTo(new_object)
-        hou.hipFile.load(self.hip_file_path, suppress_save_prompt=True)
+        # hou.hipFile.load(self.hip_file_path, suppress_save_prompt=True)
 
         network_name = "FireStarter"
-        geometry_network = hou.node("/obj").node(network_name)
+        self.fireStarter = hou.node("/obj").createNode("geo")
+        self.fireStarter.setName("FireStarter")
+
+        # Create the torus and set up the animation
+        self.sourceGeo = self.fireStarter.createNode("torus")
+        self.sourceGeo.parm('radx').set(0.5)
+        self.sourceGeo.parm('rady').set(0.25)
+
+        # Create the first transformation
+        self.transform1 = self.fireStarter.createNode("xform")
+        self.transform1.parm('tx').set(-1.3)
+        self.transform1.setInput(0, self.sourceGeo)
+
+        self.transform2 = self.fireStarter.createNode("xform")
+        self.transform2.parm('tx').set(1.3)
+        self.transform2.setInput(0, self.sourceGeo)
+
+        # Merge the geo
+        self.merge = self.fireStarter.createNode('merge')
+        self.merge.setInput(0, self.transform1)
+        self.merge.setInput(1, self.sourceGeo)
+        self.merge.setInput(2, self.transform2)
+
+        # Add object noise using the mountain node
+        self.attribNoise = self.fireStarter.createNode('attribnoise')
+        self.attribNoise.setInput(0, self.merge)
+
+        self.attribNoise.parm('usenoiseexpression').set(True)
+        self.attribNoise.parm('offset').set(hou.frame()/15)
+        # self.attribNoise.parm('attribtype').set(['P']) Have to manually set P for now
+        self.attribNoise.parm('displace').set(True)
+        self.attribNoise.parm('noiserange').set(1)
+        self.attribNoise.parm('amplitude').set(0.25)
+
+        # Create trail node
+        self.trail = self.fireStarter.createNode('trail')
+        self.trail.setInput(0, self.attribNoise)
+        self.trail.parm('result').set(3)
+        self.trail.parm('velapproximation').set(1)
+
+        # Create attribute wrangle
+        self.attrWrangle = self.fireStarter.createNode('attribwrangle')
+        self.attrWrangle.setInput(0, self.trail)
+        self.attrWrangle.parm("snippet").set("@v = @v*5;")
+
+        # Create pyrosource
+        self.pyrosource = self.fireStarter.createNode('pyrosource')
+        self.pyrosource.setInput(0, self.attrWrangle)
+        self.pyrosource.parm('mode').set(0)
+        self.pyrosource.parm('attributes').set(3)
+        
+        # Burn, Temperature, Density
+        self.pyrosource.parm('attribute1').set(2)
+        self.pyrosource.parm('attribute2').set(1)
+        self.pyrosource.parm('attribute3').set(0)
+
+        # Create attribute randomize
+        self.attrRandomize1 = self.fireStarter.createNode('attribrandomize')
+        self.attrRandomize1.setInput(0, self.pyrosource)
+        self.attrRandomize1.parm('name').set("burn")
+
+        self.attrRandomize2 = self.fireStarter.createNode('attribrandomize')
+        self.attrRandomize2.setInput(0, self.attrRandomize1)
+        self.attrRandomize2.parm('name').set("temperature")
+
+        self.attrRandomize3 = self.fireStarter.createNode('attribrandomize')
+        self.attrRandomize3.setInput(0, self.attrRandomize2)
+        self.attrRandomize3.parm('name').set("density")
+
+        # Create Volume Rasterize Attributes
+        self.volumeRasterize = self.fireStarter.createNode('volumerasterizeattributes')
+        self.volumeRasterize.setInput(0, self.attrRandomize3)
+        self.volumeRasterize.parm('attributes').set("burn temperature density v")
+
+        # Create Pyrosolver
+        self.pyrosolver = self.fireStarter.createNode('pyrosolver')
+        self.pyrosolver.setInput(0, self.volumeRasterize)
+        # self.pyrosolver.parm('solver').set(2)
+
+        self.pyrosolver.parm('numsources').set(5)
+
+        self.pyrosolver.parm('source_volume5').set("burn")
+        self.pyrosolver.parm('source_vfield5').set("divergence")
+
+        # Sets duration
+        self.pyrosolver.parm('srclimitframerange').set(True)
+
+        # Set flame height / lifespan
+        self.pyrosolver.parm('flames_lifespan').set(0.68)
+
+        # Sets voxel size
+        self.pyrosolver.parm('divsize').set(0.05)
+
+        # Add velocity
+        self.pyrosolver.parm('calcspeed').set(True)
+
+        # Add density from flame
+        self.pyrosolver.parm('soot_doemit').set(True)
+
+        # Add temperature from flame
+        self.pyrosolver.parm('temperature_doadd').set(True)
+
+        # Set it initially to steady burn
+        self.pyrosolver.parm('srclimitframerange').set(False)
+
+        # Create Convertvdb
+        self.convertvdb = self.fireStarter.createNode('convertvdb')
+        self.convertvdb.setInput(0, self.pyrosolver)
+
+        # Create Pyrobakevolume
+        self.pyrobake = self.fireStarter.createNode('pyrobakevolume')
+        self.pyrobake.setInput(0, self.convertvdb)
+        self.pyrobake.parm('enablefire').set(True)
+
+        # Create output
+        self.output = self.fireStarter.createNode('output')
+        self.output.setInput(0, self.pyrobake)
+
+        # Layout all nodes in the network
+        self.fireStarter.layoutChildren()
+
+
+    def adjustTaper(self):
+        print("hello world")
+
+
+    
+    def steadyBurnToggle(self):
+        steadyBurn = self.pyrosolver.parm('srclimitframerange').eval()
+
+        # set it to the opposing value
+        self.pyrosolver.parm('srclimitframerange').set(not steadyBurn)
+        print(steadyBurn)
+        
+
       
     def checkExisting(self, geometryName):
         # Check if the specified node exists
@@ -39,19 +161,6 @@ class FireStarter(QtWidgets.QWidget):
             hou.ui.displayMessage('{} already exists in the scene'.format(geometryName))
             return True
         return False  # Return False if the node doesn't exist
-
-    def createGeoNode(self, geometryName):
-        # Get scene root node
-        sceneRoot = hou.node('/obj/')
-        
-        # Create a subnet node (change 'subnet' to 'geo' if you want a geometry node)
-        geo_subnet = sceneRoot.createNode('subnet')
-        
-        # Set subnet node name
-        geo_subnet.setName(geometryName)
-        
-        # Display creation message
-        hou.ui.displayMessage('{} node created!'.format(geometryName))
 
 def run():
     win = FireStarter()
