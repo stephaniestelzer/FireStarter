@@ -148,6 +148,7 @@ class FireStarter(QtWidgets.QWidget):
         self.pyrobake = self.fireStarter.createNode('pyrobakevolume')
         self.pyrobake.setInput(0, self.convertvdb)
         self.pyrobake.parm('enablefire').set(True)
+        self.pyrobake.parm('kfire').set(6)
 
         # Create output
         self.output = self.fireStarter.createNode('output')
