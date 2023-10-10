@@ -66,8 +66,8 @@ class FireStarter(QtWidgets.QWidget):
         self.attribNoise.setInput(0, self.merge)
 
         self.attribNoise.parm('usenoiseexpression').set(True)
-        self.attribNoise.parm('offset').set(hou.frame()/15)
-        # self.attribNoise.parm('attribtype').set(['P']) Have to manually set P for now
+        self.attribNoise.parm('offset').setExpression("$F / 15")
+        # self.attribNoise.parm('attribtype').set("P")
         self.attribNoise.parm('displace').set(True)
         self.attribNoise.parm('noiserange').set(1)
         self.attribNoise.parm('amplitude').set(0.25)
