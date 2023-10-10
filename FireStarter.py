@@ -10,9 +10,16 @@ class FireStarter(QtWidgets.QWidget):
         
         # Setup "Create Geometry" button
         self.ui.btn_create.clicked.connect(self.buttonClicked)
-        # self.ui.durationInput.
+        # Set number of frames when a user presses enter or clicks out of the box
+        self.ui.durationInput.returnPressed.connect(self.setDuration)
+        self.ui.durationInput.editingFinished.connect(self.setDuration)
+
+        # Set-up taper slider
         self.ui.taperSlider.valueChanged[int].connect(self.adjustTaper)
         self.ui.burnCheckBox.toggled.connect(self.steadyBurnToggle)
+
+        self.numFrames = 12
+
         
     def buttonClicked(self):
         # hou.hipFile.load(self.hip_file_path, suppress_save_prompt=True)
@@ -139,28 +146,46 @@ class FireStarter(QtWidgets.QWidget):
         # Layout all nodes in the network
         self.fireStarter.layoutChildren()
 
+        # Set parm to steady burn at first
+        self.pyrosolver.parm('srclimitframerange').set(False)
+
 
     def adjustTaper(self):
         print("hello world")
 
+    def setDuration(self):
+        # If steady burn is checked... do nothing
+        if self.ui.burnCheckBox.isChecked():
+            print("Steady burn is checked -- unable to set frame range")
+            return
+        else:
+            # Check for a valid input
+            input = self.ui.durationInput.text()
+            try:
+                self.numFrames = int(input)
+                self.pyrosolver.parm('srcframerangemax').set(self.numFrames)
+            except ValueError:
+                self.ui.durationInput.setText(str(self.numFrames))
+
+
+
+
 
     
     def steadyBurnToggle(self):
-        steadyBurn = self.pyrosolver.parm('srclimitframerange').eval()
+        if self.ui.burnCheckBox.isChecked():
+            # Don't limit the frame range
+            self.pyrosolver.parm('srclimitframerange').set(False)
+            self.ui.durationInput.setText("")
 
-        # set it to the opposing value
-        self.pyrosolver.parm('srclimitframerange').set(not steadyBurn)
-        print(steadyBurn)
+        else: 
+            self.pyrosolver.parm('srclimitframerange').set(True)
+            # Set the maximum frames based
+            self.pyrosolver.parm('srcframerangemax').set(self.numFrames)
+            if not self.ui.durationInput.text().strip():
+                # Set the frame range to the previous number of frames
+                self.ui.durationInput.setText(str(self.numFrames))
         
-
-      
-    def checkExisting(self, geometryName):
-        # Check if the specified node exists
-        if hou.node('/obj/{}'.format(geometryName)):
-            # Display fail message
-            hou.ui.displayMessage('{} already exists in the scene'.format(geometryName))
-            return True
-        return False  # Return False if the node doesn't exist
 
 def run():
     win = FireStarter()
