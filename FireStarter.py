@@ -2,23 +2,36 @@ import hou
 from PySide2 import QtCore, QtUiTools, QtWidgets
 
 class FireStarter(QtWidgets.QWidget):
+
     def __init__(self):
+        if hasattr(self, 'ui'):
+            return
+        
         super(FireStarter, self).__init__()
         ui_file = '/Users/stephaniestelzer/Documents/HoudiniPlugins/FireStarter/SmallerUI.ui'
         self.ui = QtUiTools.QUiLoader().load(ui_file, parentWidget=self)
         self.setParent(hou.ui.mainQtWindow(), QtCore.Qt.Window)
+
+        # Set the 'always on top' flag
+        self.setWindowFlags(QtCore.Qt.Window | QtCore.Qt.WindowStaysOnTopHint)
         
         # Setup "Create Geometry" button
         self.ui.btn_create.clicked.connect(self.buttonClicked)
-        # Set number of frames when a user presses enter or clicks out of the box
-        self.ui.durationInput.returnPressed.connect(self.setDuration)
-        self.ui.durationInput.editingFinished.connect(self.setDuration)
+
+        # Set end frame
+        self.ui.endFrame.returnPressed.connect(self.setEndframe)
+        self.ui.endFrame.editingFinished.connect(self.setEndframe)
+
+        # Set start frame
+        self.ui.startFrame.returnPressed.connect(self.setStartframe)
+        self.ui.startFrame.editingFinished.connect(self.setStartframe)
 
         # Set-up taper slider
         self.ui.taperSlider.valueChanged[int].connect(self.adjustTaper)
         self.ui.burnCheckBox.toggled.connect(self.steadyBurnToggle)
 
-        self.numFrames = 12
+        self.startFrame = 1
+        self.endFrame = 12
 
         
     def buttonClicked(self):
@@ -127,9 +140,6 @@ class FireStarter(QtWidgets.QWidget):
         # Add temperature from flame
         self.pyrosolver.parm('temperature_doadd').set(True)
 
-        # Set it initially to steady burn
-        self.pyrosolver.parm('srclimitframerange').set(False)
-
         # Create Convertvdb
         self.convertvdb = self.fireStarter.createNode('convertvdb')
         self.convertvdb.setInput(0, self.pyrosolver)
@@ -149,42 +159,53 @@ class FireStarter(QtWidgets.QWidget):
         # Set parm to steady burn at first
         self.pyrosolver.parm('srclimitframerange').set(False)
 
-
     def adjustTaper(self):
         print("hello world")
 
-    def setDuration(self):
+    def setEndframe(self):
         # If steady burn is checked... do nothing
         if self.ui.burnCheckBox.isChecked():
             print("Steady burn is checked -- unable to set frame range")
             return
         else:
             # Check for a valid input
-            input = self.ui.durationInput.text()
+            input = self.ui.endFrame.text()
             try:
-                self.numFrames = int(input)
-                self.pyrosolver.parm('srcframerangemax').set(self.numFrames)
+                self.endFrame = int(input)
+                self.pyrosolver.parm('srcframerangemax').set(self.endFrame)
             except ValueError:
-                self.ui.durationInput.setText(str(self.numFrames))
+                self.ui.endFrame.setText(str(self.endFrame))
+
+    def setStartframe(self):
+        # If steady burn is checked... do nothing
+        if self.ui.burnCheckBox.isChecked():
+            print("Steady burn is checked -- unable to set frame range")
+            return
+        else:
+            # Check for a valid input
+            input = self.ui.startFrame.text()
+            try:
+                self.startFrame = int(input)
+                self.pyrosolver.parm('srcframerangemin').set(self.startFrame)
+            except ValueError:
+                self.ui.startFrame.setText(str(self.startFrame))
 
 
-
-
-
-    
     def steadyBurnToggle(self):
         if self.ui.burnCheckBox.isChecked():
             # Don't limit the frame range
             self.pyrosolver.parm('srclimitframerange').set(False)
-            self.ui.durationInput.setText("")
+            self.ui.startFrame.setText("")
+            self.ui.endFrame.setText("")
 
         else: 
             self.pyrosolver.parm('srclimitframerange').set(True)
-            # Set the maximum frames based
-            self.pyrosolver.parm('srcframerangemax').set(self.numFrames)
-            if not self.ui.durationInput.text().strip():
-                # Set the frame range to the previous number of frames
-                self.ui.durationInput.setText(str(self.numFrames))
+            # Set start and end frames
+            self.pyrosolver.parm('srcframerangemin').set(self.startFrame)
+            self.pyrosolver.parm('srcframerangemax').set(self.endFrame)
+            # Set the frame range to the previous number of frames
+            self.ui.startFrame.setText(str(self.startFrame))
+            self.ui.endFrame.setText(str(self.endFrame))
         
 
 def run():
