@@ -19,7 +19,7 @@
      <x>10</x>
      <y>20</y>
      <width>368</width>
-     <height>249</height>
+     <height>284</height>
     </rect>
    </property>
    <layout class="QGridLayout" name="gridLayout">
@@ -72,19 +72,6 @@
       </property>
      </widget>
     </item>
-    <item row="6" column="0">
-     <widget class="QLabel" name="TaperText">
-      <property name="font">
-       <font>
-        <family>Arial</family>
-        <pointsize>22</pointsize>
-       </font>
-      </property>
-      <property name="text">
-       <string>Taper</string>
-      </property>
-     </widget>
-    </item>
     <item row="4" column="1">
      <widget class="QCheckBox" name="burnCheckBox">
       <property name="enabled">
@@ -124,9 +111,22 @@
      <widget class="QLineEdit" name="endFrame"/>
     </item>
     <item row="6" column="1" colspan="3">
-     <widget class="QSlider" name="taperSlider">
+     <widget class="QSlider" name="compactnessSlider">
       <property name="orientation">
        <enum>Qt::Horizontal</enum>
+      </property>
+     </widget>
+    </item>
+    <item row="8" column="0">
+     <widget class="QLabel" name="BrightnessText">
+      <property name="font">
+       <font>
+        <family>Arial</family>
+        <pointsize>22</pointsize>
+       </font>
+      </property>
+      <property name="text">
+       <string>Brightness</string>
       </property>
      </widget>
     </item>
@@ -172,8 +172,8 @@
       </property>
      </widget>
     </item>
-    <item row="8" column="0">
-     <widget class="QLabel" name="BrightnessText">
+    <item row="6" column="0">
+     <widget class="QLabel" name="TaperText">
       <property name="font">
        <font>
         <family>Arial</family>
@@ -181,7 +181,7 @@
        </font>
       </property>
       <property name="text">
-       <string>Brightness</string>
+       <string>Compactness</string>
       </property>
      </widget>
     </item>

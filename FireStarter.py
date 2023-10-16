@@ -27,7 +27,7 @@ class FireStarter(QtWidgets.QWidget):
         self.ui.startFrame.editingFinished.connect(self.setStartframe)
 
         # Set-up taper slider
-        self.ui.taperSlider.valueChanged[int].connect(self.adjustTaper)
+        self.ui.compactnessSlider.valueChanged[int].connect(self.adjustCompactness)
 
         # Steady-burn checkbox
         self.ui.burnCheckBox.toggled.connect(self.steadyBurnToggle)
@@ -182,8 +182,15 @@ class FireStarter(QtWidgets.QWidget):
         # Set parm to steady burn at first
         self.pyrosolver.parm('srclimitframerange').set(False)
 
-    def adjustTaper(self):
-        print("hello world")
+    def adjustCompactness(self):
+        value = (self.ui.compactnessSlider.value() / 10.0)
+        print(value)
+        if value == 0:
+            self.pyrosolver.parm('enable_viscosity').set(False)
+        else:
+            self.pyrosolver.parm('enable_viscosity').set(True)
+            self.pyrosolver.parm('viscosity').set(value / 10)
+
 
     def adjustBrightness(self):
         value = (self.ui.brightnessSlider.value() / 100.0)
