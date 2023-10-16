@@ -167,13 +167,13 @@
     </item>
    </layout>
   </widget>
-  <widget class="QGraphicsView" name="graphicsView">
+  <widget class="QWidget" name="widget" native="true">
    <property name="geometry">
     <rect>
-     <x>60</x>
+     <x>40</x>
      <y>270</y>
-     <width>256</width>
-     <height>141</height>
+     <width>291</width>
+     <height>121</height>
     </rect>
    </property>
   </widget>

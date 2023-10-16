@@ -140,6 +140,10 @@ class FireStarter(QtWidgets.QWidget):
         # Add temperature from flame
         self.pyrosolver.parm('temperature_doadd').set(True)
 
+        # Adjust smoke on the pyrosolver
+        self.pyrosolver.parm('s_densityscale').set(0.02)
+        self.pyrosolver.parm('fi_int').set(25)
+
         # Create Convertvdb
         self.convertvdb = self.fireStarter.createNode('convertvdb')
         self.convertvdb.setInput(0, self.pyrosolver)
@@ -148,7 +152,15 @@ class FireStarter(QtWidgets.QWidget):
         self.pyrobake = self.fireStarter.createNode('pyrobakevolume')
         self.pyrobake.setInput(0, self.convertvdb)
         self.pyrobake.parm('enablefire').set(True)
-        self.pyrobake.parm('kfire').set(6)
+        self.pyrobake.parm('kfire').set(25)
+
+        # Set up smoke
+        self.pyrobake.parm('firecolorramp1pos').set(0.340909)
+        self.pyrobake.parm('firecolorramp1cr').set(0.001)
+        self.pyrobake.parm('firecolorramp1cg').set(0.001)
+        self.pyrobake.parm('firecolorramp1cb').set(0.001)
+        self.pyrobake.parm('densityscale').set(0.02)
+
 
         # Create output
         self.output = self.fireStarter.createNode('output')
