@@ -36,6 +36,7 @@ class FireStarter(QtWidgets.QWidget):
         self.ui.heightSlider.valueChanged[int].connect(self.adjustHeight)
 
         # Set-up brightness slider
+        self.ui.brightnessSlider.valueChanged[int].connect(self.adjustBrightness);
 
         self.startFrame = 1
         self.endFrame = 12
@@ -122,7 +123,6 @@ class FireStarter(QtWidgets.QWidget):
         # Create Pyrosolver
         self.pyrosolver = self.fireStarter.createNode('pyrosolver')
         self.pyrosolver.setInput(0, self.volumeRasterize)
-        # self.pyrosolver.parm('solver').set(2)
 
         self.pyrosolver.parm('numsources').set(5)
 
@@ -151,6 +151,9 @@ class FireStarter(QtWidgets.QWidget):
         self.pyrosolver.parm('s_densityscale').set(0.02)
         self.pyrosolver.parm('fi_int').set(25)
 
+        # Set initial temperature scale
+        self.pyrosolver.parm('source_vscale2').set(0.01)
+
         # Create Convertvdb
         self.convertvdb = self.fireStarter.createNode('convertvdb')
         self.convertvdb.setInput(0, self.pyrosolver)
@@ -159,7 +162,7 @@ class FireStarter(QtWidgets.QWidget):
         self.pyrobake = self.fireStarter.createNode('pyrobakevolume')
         self.pyrobake.setInput(0, self.convertvdb)
         self.pyrobake.parm('enablefire').set(True)
-        self.pyrobake.parm('kfire').set(25)
+        self.pyrobake.parm('kfire').set(1)
 
         # Set up smoke
         self.pyrobake.parm('firecolorramp1pos').set(0.0166945)
@@ -182,6 +185,17 @@ class FireStarter(QtWidgets.QWidget):
     def adjustTaper(self):
         print("hello world")
 
+    def adjustBrightness(self):
+        value = (self.ui.brightnessSlider.value() / 100.0)
+        brightness = value * (4950 / 49)
+
+        if brightness == 0:
+            self.pyrobake.parm('kfire').set(1)
+        else:
+            self.pyrobake.parm('kfire').set(brightness)
+
+        print(brightness)
+    
     def adjustHeight(self):
         value = self.ui.heightSlider.value()
 
@@ -189,9 +203,9 @@ class FireStarter(QtWidgets.QWidget):
         tempValue = value * (169/9900)
 
         # Account for edge cases
-        if value is 0:
+        if value == 0:
             tempValue = 0.01
-        if value is 99:
+        if value == 99:
             tempValue = 1.7
 
         self.pyrosolver.parm('source_vscale2').set(tempValue)
