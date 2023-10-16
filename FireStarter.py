@@ -28,7 +28,14 @@ class FireStarter(QtWidgets.QWidget):
 
         # Set-up taper slider
         self.ui.taperSlider.valueChanged[int].connect(self.adjustTaper)
+
+        # Steady-burn checkbox
         self.ui.burnCheckBox.toggled.connect(self.steadyBurnToggle)
+
+        # Set-up height slider
+        self.ui.heightSlider.valueChanged[int].connect(self.adjustHeight)
+
+        # Set-up brightness slider
 
         self.startFrame = 1
         self.endFrame = 12
@@ -155,7 +162,7 @@ class FireStarter(QtWidgets.QWidget):
         self.pyrobake.parm('kfire').set(25)
 
         # Set up smoke
-        self.pyrobake.parm('firecolorramp1pos').set(0.340909)
+        self.pyrobake.parm('firecolorramp1pos').set(0.0166945)
         self.pyrobake.parm('firecolorramp1cr').set(0.001)
         self.pyrobake.parm('firecolorramp1cg').set(0.001)
         self.pyrobake.parm('firecolorramp1cb').set(0.001)
@@ -174,6 +181,20 @@ class FireStarter(QtWidgets.QWidget):
 
     def adjustTaper(self):
         print("hello world")
+
+    def adjustHeight(self):
+        value = self.ui.heightSlider.value()
+
+        # Multiply the slider by the ratio to get the Temperature Scale value
+        tempValue = value * (169/9900)
+
+        # Account for edge cases
+        if value is 0:
+            tempValue = 0.01
+        if value is 99:
+            tempValue = 1.7
+
+        self.pyrosolver.parm('source_vscale2').set(tempValue)
 
     def setEndframe(self):
         # If steady burn is checked... do nothing
