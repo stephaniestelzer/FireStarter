@@ -1,5 +1,5 @@
 import hou
-from PySide2 import QtCore, QtUiTools, QtWidgets
+from PySide2 import QtCore, QtUiTools, QtWidgets, QtGui
 
 class FireStarter(QtWidgets.QWidget):
 
@@ -36,12 +36,38 @@ class FireStarter(QtWidgets.QWidget):
         self.ui.heightSlider.valueChanged[int].connect(self.adjustHeight)
 
         # Set-up brightness slider
-        self.ui.brightnessSlider.valueChanged[int].connect(self.adjustBrightness);
+        self.ui.brightnessSlider.valueChanged[int].connect(self.adjustBrightness)
+
+        # Set-up Dropdown
+        self.ui.simulationType.addItems(['Campfire', 'Spread', 'Export'])
+        self.ui.simulationType.currentIndexChanged.connect(self.changeUI)
+
+        # Initialize stacked widget & add the dropdown
+        self.ui.stackedWidget.setCurrentIndex(0)
+        
+
+        # Set-up Fire GUI
+        self.innerColor = QtGui.QColor(255, 166, 38)
+        self.outerColor = QtGui.QColor(77, 77, 77)
+
 
         self.startFrame = 1
         self.endFrame = 12
 
         
+    def changeUI(self):
+        page = self.ui.simulationType.currentText()
+        if page == "Export":
+            print("p2")
+            self.ui.stackedWidget.setCurrentIndex(2)
+        if page == "Spread":
+            print("p1")
+            self.ui.stackedWidget.setCurrentIndex(1)
+        if page == "Campfire":
+            print("p0")
+            self.ui.stackedWidget.setCurrentIndex(0)
+
+            
     def buttonClicked(self):
         # hou.hipFile.load(self.hip_file_path, suppress_save_prompt=True)
 
