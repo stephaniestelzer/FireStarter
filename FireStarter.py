@@ -1,5 +1,6 @@
 import hou
 from PySide2 import QtCore, QtUiTools, QtWidgets, QtGui
+from PySide2.QtGui import QColor
 
 class FireStarter(QtWidgets.QWidget):
 
@@ -15,6 +16,7 @@ class FireStarter(QtWidgets.QWidget):
         # Set the 'always on top' flag
         self.setWindowFlags(QtCore.Qt.Window | QtCore.Qt.WindowStaysOnTopHint)
         
+        ## ---------- CAMPFIRE SET-UP -------------------------
         # Setup "Create Geometry" button
         self.ui.btn_create.clicked.connect(self.buttonClicked)
 
@@ -42,32 +44,36 @@ class FireStarter(QtWidgets.QWidget):
         self.ui.simulationType.addItems(['Campfire', 'Spread', 'Export'])
         self.ui.simulationType.currentIndexChanged.connect(self.changeUI)
 
+        # Set-up color picker
+        self.ui.colorChoose.clicked.connect(self.changeFireColor)
+
         # Initialize stacked widget & add the dropdown
         self.ui.stackedWidget.setCurrentIndex(0)
         
-
-        # Set-up Fire GUI
-        self.innerColor = QtGui.QColor(255, 166, 38)
-        self.outerColor = QtGui.QColor(77, 77, 77)
+        ## ---------- SPREAD SET-UP -------------------
+        self.ui.openFile.clicked.connect(self.openFile)
 
 
         self.startFrame = 1
         self.endFrame = 12
 
-        
+    def openFile(self):
+        options = QtWidgets.QFileDialog.Options()
+        file_path, _ = QtWidgets.QFileDialog.getOpenFileName(self, "Open File", "", "USD Files (*.USD);;FBX Files (*.fbx);;OBJ Files (*.obj)", options=options)
+
+        if file_path:
+            # Do something with the selected file (e.g., load or process it)
+            print(f"Selected File: {file_path}")
+
     def changeUI(self):
         page = self.ui.simulationType.currentText()
         if page == "Export":
-            print("p2")
             self.ui.stackedWidget.setCurrentIndex(2)
         if page == "Spread":
-            print("p1")
             self.ui.stackedWidget.setCurrentIndex(1)
         if page == "Campfire":
-            print("p0")
             self.ui.stackedWidget.setCurrentIndex(0)
 
-            
     def buttonClicked(self):
         # hou.hipFile.load(self.hip_file_path, suppress_save_prompt=True)
 
@@ -287,7 +293,18 @@ class FireStarter(QtWidgets.QWidget):
             # Set the frame range to the previous number of frames
             self.ui.startFrame.setText(str(self.startFrame))
             self.ui.endFrame.setText(str(self.endFrame))
-        
+
+    def changeFireColor(self):
+        color = QtWidgets.QColorDialog().getColor()
+        if color.isValid():
+            # Returns hex code of selected color
+            hexColor = color.name().lstrip("#")
+            print(hexColor)
+            rgb = tuple(int(hexColor[i:i+2], 16) for i in (0, 2, 4))
+            print(rgb)
+            self.pyrobake.parm('firecolorramp2cr').set( (rgb[0]) / 255)
+            self.pyrobake.parm('firecolorramp2cg').set( (rgb[1]) / 255)
+            self.pyrobake.parm('firecolorramp2cb').set( (rgb[2]) / 255)
 
 def run():
     win = FireStarter()
