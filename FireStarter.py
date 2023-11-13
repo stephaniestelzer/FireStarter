@@ -2,6 +2,8 @@ import hou
 from PySide2 import QtCore, QtUiTools, QtWidgets, QtGui
 from PySide2.QtGui import QColor
 
+from Campfire import Campfire
+
 class FireStarter(QtWidgets.QWidget):
 
     def __init__(self):
@@ -15,8 +17,11 @@ class FireStarter(QtWidgets.QWidget):
 
         # Set the 'always on top' flag
         self.setWindowFlags(QtCore.Qt.Window | QtCore.Qt.WindowStaysOnTopHint)
+
+        # Add event listener
+        # hou.session.myEventHandler = hou.ui.addEventCallback(hou.nodeEventType.BeingDeleted, self.detectDeletion())
         
-        ## ---------- CAMPFIRE SET-UP -------------------------
+        ## ---------- CAMPFIRE UI SET-UP -------------------- #
         # Setup "Create Geometry" button
         self.ui.btn_create.clicked.connect(self.buttonClicked)
 
@@ -49,13 +54,47 @@ class FireStarter(QtWidgets.QWidget):
 
         # Initialize stacked widget & add the dropdown
         self.ui.stackedWidget.setCurrentIndex(0)
-        
-        ## ---------- SPREAD SET-UP -------------------
-        self.ui.openFile.clicked.connect(self.openFile)
-
 
         self.startFrame = 1
         self.endFrame = 12
+        
+        ## ---------- SPREAD UI SET-UP ------------------------- #
+        self.ui.openFile.clicked.connect(self.openFile)
+
+        # Initialize number of simulations
+        self.simNumber = 0
+
+        self.fireList = []
+
+        # Set each menu initially disabled
+        # self.disableCampfireMenu()
+
+    def detectDeletion(self):
+        print("Deletion Detected")
+    
+    def enableCampfireMenu(self):
+        campfirePage = self.ui.stackedWidget.widget(0)
+        for widget in campfirePage.findChildren(QtWidgets.QWidget):
+            widget.setEnabled(True)
+
+    def disableCampfireMenu(self):
+        excludedName = ['btn_create']
+        campfirePage = self.ui.stackedWidget.widget(0)
+        for widget in campfirePage.findChildren(QtWidgets.QWidget):
+            print(widget.objectName())
+            if str(widget.objectName()) not in excludedName:
+                print("Accessed")
+                widget.setEnabled(False)
+            
+    def enableSpreadMenu(self):
+        print("Not Accessible Yet")
+
+    def disableSpreadMenu(self):
+        print("Not Accessible Yet")
+
+
+    def selectionChangedCallback(self):
+        print("Selection")
 
     def openFile(self):
         options = QtWidgets.QFileDialog.Options()
@@ -63,7 +102,18 @@ class FireStarter(QtWidgets.QWidget):
 
         if file_path:
             # Do something with the selected file (e.g., load or process it)
-            print(f"Selected File: {file_path}")
+            fileExtension = file_path.split(".")[-1]
+            if fileExtension == "fbx":
+                hou.hipFile.importFBX(file_path)
+            if fileExtension == "usd":
+                # Create a geometry node to house the USD import
+                objNetwork = hou.node("/obj")
+                # Have to account for if the geo node has been created here
+                geomNode = objNetwork.createNode("geo", "USD_ImportedGeo")
+                # Create USD Import node
+                usdImportNode = geomNode.createNode("usdimport")
+                usdImportNode.parm("filepath1").set(file_path)
+
 
     def changeUI(self):
         page = self.ui.simulationType.currentText()
@@ -76,145 +126,15 @@ class FireStarter(QtWidgets.QWidget):
 
     def buttonClicked(self):
         # hou.hipFile.load(self.hip_file_path, suppress_save_prompt=True)
-
-        network_name = "FireStarter"
-        self.fireStarter = hou.node("/obj").createNode("geo")
-        self.fireStarter.setName("FireStarter")
-
-        # Create the torus and set up the animation
-        self.sourceGeo = self.fireStarter.createNode("torus")
-        self.sourceGeo.parm('radx').set(0.5)
-        self.sourceGeo.parm('rady').set(0.25)
-
-        # Create the first transformation
-        self.transform1 = self.fireStarter.createNode("xform")
-        self.transform1.parm('tx').set(-1.3)
-        self.transform1.setInput(0, self.sourceGeo)
-
-        self.transform2 = self.fireStarter.createNode("xform")
-        self.transform2.parm('tx').set(1.3)
-        self.transform2.setInput(0, self.sourceGeo)
-
-        # Merge the geo
-        self.merge = self.fireStarter.createNode('merge')
-        self.merge.setInput(0, self.transform1)
-        self.merge.setInput(1, self.sourceGeo)
-        self.merge.setInput(2, self.transform2)
-
-        # Add object noise using the mountain node
-        self.attribNoise = self.fireStarter.createNode('attribnoise')
-        self.attribNoise.setInput(0, self.merge)
-
-        self.attribNoise.parm('usenoiseexpression').set(True)
-        self.attribNoise.parm('offset').setExpression("$F / 15")
-        self.attribNoise.parm('attribs').set("P")
-        self.attribNoise.parm('displace').set(True)
-        self.attribNoise.parm('noiserange').set(1)
-        self.attribNoise.parm('amplitude').set(0.25)
-
-        # Create trail node
-        self.trail = self.fireStarter.createNode('trail')
-        self.trail.setInput(0, self.attribNoise)
-        self.trail.parm('result').set(3)
-        self.trail.parm('velapproximation').set(1)
-
-        # Create attribute wrangle
-        self.attrWrangle = self.fireStarter.createNode('attribwrangle')
-        self.attrWrangle.setInput(0, self.trail)
-        self.attrWrangle.parm("snippet").set("@v = @v*5;")
-
-        # Create pyrosource
-        self.pyrosource = self.fireStarter.createNode('pyrosource')
-        self.pyrosource.setInput(0, self.attrWrangle)
-        self.pyrosource.parm('mode').set(0)
-        self.pyrosource.parm('attributes').set(3)
-        
-        # Burn, Temperature, Density
-        self.pyrosource.parm('attribute1').set(2)
-        self.pyrosource.parm('attribute2').set(1)
-        self.pyrosource.parm('attribute3').set(0)
-
-        # Create attribute randomize
-        self.attrRandomize1 = self.fireStarter.createNode('attribrandomize')
-        self.attrRandomize1.setInput(0, self.pyrosource)
-        self.attrRandomize1.parm('name').set("burn")
-
-        self.attrRandomize2 = self.fireStarter.createNode('attribrandomize')
-        self.attrRandomize2.setInput(0, self.attrRandomize1)
-        self.attrRandomize2.parm('name').set("temperature")
-
-        self.attrRandomize3 = self.fireStarter.createNode('attribrandomize')
-        self.attrRandomize3.setInput(0, self.attrRandomize2)
-        self.attrRandomize3.parm('name').set("density")
-
-        # Create Volume Rasterize Attributes
-        self.volumeRasterize = self.fireStarter.createNode('volumerasterizeattributes')
-        self.volumeRasterize.setInput(0, self.attrRandomize3)
-        self.volumeRasterize.parm('attributes').set("burn temperature density v")
-
-        # Create Pyrosolver
-        self.pyrosolver = self.fireStarter.createNode('pyrosolver')
-        self.pyrosolver.setInput(0, self.volumeRasterize)
-
-        self.pyrosolver.parm('numsources').set(5)
-
-        self.pyrosolver.parm('source_volume5').set("burn")
-        self.pyrosolver.parm('source_vfield5').set("divergence")
-
-        # Sets duration
-        self.pyrosolver.parm('srclimitframerange').set(True)
-
-        # Set flame height / lifespan
-        self.pyrosolver.parm('flames_lifespan').set(0.68)
-
-        # Sets voxel size
-        self.pyrosolver.parm('divsize').set(0.05)
-
-        # Add velocity
-        self.pyrosolver.parm('calcspeed').set(True)
-
-        # Add density from flame
-        self.pyrosolver.parm('soot_doemit').set(True)
-
-        # Add temperature from flame
-        self.pyrosolver.parm('temperature_doadd').set(True)
-
-        # Adjust smoke on the pyrosolver
-        self.pyrosolver.parm('s_densityscale').set(0.02)
-        self.pyrosolver.parm('fi_int').set(25)
-
-        # Set initial temperature scale
-        self.pyrosolver.parm('source_vscale2').set(0.01)
-
-        # Create Convertvdb
-        self.convertvdb = self.fireStarter.createNode('convertvdb')
-        self.convertvdb.setInput(0, self.pyrosolver)
-
-        # Create Pyrobakevolume
-        self.pyrobake = self.fireStarter.createNode('pyrobakevolume')
-        self.pyrobake.setInput(0, self.convertvdb)
-        self.pyrobake.parm('enablefire').set(True)
-        self.pyrobake.parm('kfire').set(1)
-
-        # Set up smoke
-        self.pyrobake.parm('firecolorramp1pos').set(0.0166945)
-        self.pyrobake.parm('firecolorramp1cr').set(0.001)
-        self.pyrobake.parm('firecolorramp1cg').set(0.001)
-        self.pyrobake.parm('firecolorramp1cb').set(0.001)
-        self.pyrobake.parm('densityscale').set(0.02)
+        self.simNumber += 1
+        campfire = Campfire(self.simNumber)
+        self.fireList.append(campfire)
 
 
-        # Create output
-        self.output = self.fireStarter.createNode('output')
-        self.output.setInput(0, self.pyrobake)
-
-        # Layout all nodes in the network
-        self.fireStarter.layoutChildren()
-
-        # Set parm to steady burn at first
-        self.pyrosolver.parm('srclimitframerange').set(False)
 
     def adjustCompactness(self):
+        nodes = hou.selectedNodes()
+        print(nodes[0])
         value = (self.ui.compactnessSlider.value() / 10.0)
         print(value)
         if value == 0:
