@@ -136,12 +136,15 @@ class FireStarter(QtWidgets.QWidget):
         nodes = hou.selectedNodes()
         print(nodes[0])
         value = (self.ui.compactnessSlider.value() / 10.0)
+        for i in self.fireList:
+            print(i.networkName)
+        i = self.fireList[0]
         print(value)
         if value == 0:
-            self.pyrosolver.parm('enable_viscosity').set(False)
+            i.pyrosolver.parm('enable_viscosity').set(False)
         else:
-            self.pyrosolver.parm('enable_viscosity').set(True)
-            self.pyrosolver.parm('viscosity').set(value / 10)
+            i.pyrosolver.parm('enable_viscosity').set(True)
+            i.pyrosolver.parm('viscosity').set(value / 10)
 
 
     def adjustBrightness(self):
