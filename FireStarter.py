@@ -64,7 +64,7 @@ class FireStarter(QtWidgets.QWidget):
         # Initialize number of simulations
         self.simNumber = 0
 
-        self.fireList = []
+        self.campfireDict = {}
 
         # Set each menu initially disabled
         # self.disableCampfireMenu()
@@ -128,106 +128,123 @@ class FireStarter(QtWidgets.QWidget):
         # hou.hipFile.load(self.hip_file_path, suppress_save_prompt=True)
         self.simNumber += 1
         campfire = Campfire(self.simNumber)
-        self.fireList.append(campfire)
+        networkName = "Campfire_" + str(self.simNumber)
+        self.campfireDict[networkName] = campfire
 
+    def getCampfireNode(self):
+        nodes = hou.selectedNodes()
+        if len(nodes) != 1:
+            return None
+        
+        nodeName = nodes[0].name()
+        campfireNode = self.campfireDict[nodeName]
+        return campfireNode
 
 
     def adjustCompactness(self):
-        nodes = hou.selectedNodes()
-        print(nodes[0])
         value = (self.ui.compactnessSlider.value() / 10.0)
-        for i in self.fireList:
-            print(i.networkName)
-        i = self.fireList[0]
-        print(value)
-        if value == 0:
-            i.pyrosolver.parm('enable_viscosity').set(False)
-        else:
-            i.pyrosolver.parm('enable_viscosity').set(True)
-            i.pyrosolver.parm('viscosity').set(value / 10)
+        i = self.getCampfireNode()
+        if i != None:
+            if value == 0:
+                i.pyrosolver.parm('enable_viscosity').set(False)
+            else:
+                i.pyrosolver.parm('enable_viscosity').set(True)
+                i.pyrosolver.parm('viscosity').set(value / 10)
 
 
     def adjustBrightness(self):
-        value = (self.ui.brightnessSlider.value() / 100.0)
-        brightness = value * (4950 / 49)
+        n = self.getCampfireNode()
+        if (n != None):
+            value = (self.ui.brightnessSlider.value() / 100.0)
+            brightness = value * (4950 / 49)
 
-        if brightness == 0:
-            self.pyrobake.parm('kfire').set(1)
-        else:
-            self.pyrobake.parm('kfire').set(brightness)
+            if brightness == 0:
+                n.pyrobake.parm('kfire').set(1)
+            else:
+                n.pyrobake.parm('kfire').set(brightness)
 
-        print(brightness)
+            print(brightness)
     
     def adjustHeight(self):
-        value = self.ui.heightSlider.value()
+        n = self.getCampfireNode()
+        if n != None:
+            value = self.ui.heightSlider.value()
 
-        # Multiply the slider by the ratio to get the Temperature Scale value
-        tempValue = value * (169/9900)
+            # Multiply the slider by the ratio to get the Temperature Scale value
+            tempValue = value * (169/9900)
 
-        # Account for edge cases
-        if value == 0:
-            tempValue = 0.01
-        if value == 99:
-            tempValue = 1.7
+            # Account for edge cases
+            if value == 0:
+                tempValue = 0.01
+            if value == 99:
+                tempValue = 1.7
 
-        self.pyrosolver.parm('source_vscale2').set(tempValue)
+            n.pyrosolver.parm('source_vscale2').set(tempValue)
 
     def setEndframe(self):
+        n = self.getCampfireNode()
         # If steady burn is checked... do nothing
-        if self.ui.burnCheckBox.isChecked():
-            print("Steady burn is checked -- unable to set frame range")
-            return
-        else:
-            # Check for a valid input
-            input = self.ui.endFrame.text()
-            try:
-                self.endFrame = int(input)
-                self.pyrosolver.parm('srcframerangemax').set(self.endFrame)
-            except ValueError:
-                self.ui.endFrame.setText(str(self.endFrame))
+        if n != None:
+            if self.ui.burnCheckBox.isChecked():
+                print("Steady burn is checked -- unable to set frame range")
+                return
+            else:
+                # Check for a valid input
+                input = self.ui.endFrame.text()
+                try:
+                    self.endFrame = int(input)
+                    n.pyrosolver.parm('srcframerangemax').set(self.endFrame)
+                except ValueError:
+                    self.ui.endFrame.setText(str(self.endFrame))
 
     def setStartframe(self):
-        # If steady burn is checked... do nothing
-        if self.ui.burnCheckBox.isChecked():
-            print("Steady burn is checked -- unable to set frame range")
-            return
-        else:
-            # Check for a valid input
-            input = self.ui.startFrame.text()
-            try:
-                self.startFrame = int(input)
-                self.pyrosolver.parm('srcframerangemin').set(self.startFrame)
-            except ValueError:
-                self.ui.startFrame.setText(str(self.startFrame))
+        n = self.getCampfireNode()
+        if n != None:
+            # If steady burn is checked... do nothing
+            if self.ui.burnCheckBox.isChecked():
+                print("Steady burn is checked -- unable to set frame range")
+                return
+            else:
+                # Check for a valid input
+                input = self.ui.startFrame.text()
+                try:
+                    self.startFrame = int(input)
+                    self.pyrosolver.parm('srcframerangemin').set(self.startFrame)
+                except ValueError:
+                    self.ui.startFrame.setText(str(self.startFrame))
 
 
     def steadyBurnToggle(self):
-        if self.ui.burnCheckBox.isChecked():
-            # Don't limit the frame range
-            self.pyrosolver.parm('srclimitframerange').set(False)
-            self.ui.startFrame.setText("")
-            self.ui.endFrame.setText("")
+        n = self.getCampfireNode()
+        if n != None:
+            if self.ui.burnCheckBox.isChecked():
+                # Don't limit the frame range
+                n.pyrosolver.parm('srclimitframerange').set(False)
+                self.ui.startFrame.setText("")
+                self.ui.endFrame.setText("")
 
-        else: 
-            self.pyrosolver.parm('srclimitframerange').set(True)
-            # Set start and end frames
-            self.pyrosolver.parm('srcframerangemin').set(self.startFrame)
-            self.pyrosolver.parm('srcframerangemax').set(self.endFrame)
-            # Set the frame range to the previous number of frames
-            self.ui.startFrame.setText(str(self.startFrame))
-            self.ui.endFrame.setText(str(self.endFrame))
+            else: 
+                n.pyrosolver.parm('srclimitframerange').set(True)
+                # Set start and end frames
+                n.pyrosolver.parm('srcframerangemin').set(self.startFrame)
+                n.pyrosolver.parm('srcframerangemax').set(self.endFrame)
+                # Set the frame range to the previous number of frames
+                self.ui.startFrame.setText(str(self.startFrame))
+                self.ui.endFrame.setText(str(self.endFrame))
 
     def changeFireColor(self):
-        color = QtWidgets.QColorDialog().getColor()
-        if color.isValid():
-            # Returns hex code of selected color
-            hexColor = color.name().lstrip("#")
-            print(hexColor)
-            rgb = tuple(int(hexColor[i:i+2], 16) for i in (0, 2, 4))
-            print(rgb)
-            self.pyrobake.parm('firecolorramp2cr').set( (rgb[0]) / 255)
-            self.pyrobake.parm('firecolorramp2cg').set( (rgb[1]) / 255)
-            self.pyrobake.parm('firecolorramp2cb').set( (rgb[2]) / 255)
+        n = self.getCampfireNode()
+        if n != None:
+            color = QtWidgets.QColorDialog().getColor()
+            if color.isValid():
+                # Returns hex code of selected color
+                hexColor = color.name().lstrip("#")
+                print(hexColor)
+                rgb = tuple(int(hexColor[i:i+2], 16) for i in (0, 2, 4))
+                print(rgb)
+                n.pyrobake.parm('firecolorramp2cr').set( (rgb[0]) / 255)
+                n.pyrobake.parm('firecolorramp2cg').set( (rgb[1]) / 255)
+                n.pyrobake.parm('firecolorramp2cb').set( (rgb[2]) / 255)
 
 def run():
     win = FireStarter()
