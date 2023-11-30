@@ -1,11 +1,52 @@
 import hou
+import dopsparsepyrotools
 from PySide2 import QtCore, QtUiTools, QtWidgets, QtGui
 from PySide2.QtGui import QColor
 
 from Campfire import Campfire
+from FireSpread import FireSpread
+
+class customItemWidget(QtWidgets.QWidget):
+    def __init__(self, name):
+        super().__init__()
+
+        self.nodeName = name
+
+        self.label = QtWidgets.QLabel(name)
+        self.button = QtWidgets.QPushButton("Export")
+        self.button.clicked.connect(self.exportSim)
+        layout = QtWidgets.QGridLayout(self)
+        self.setLayout(layout)
+        layout.addWidget(self.label, 0, 0)
+        layout.addWidget(self.button, 0, 1)
+
+    def sizeHint(self):
+        return self.minimumSizeHint()
+    
+    def exportSim(self):
+        print("connected")
+        options = QtWidgets.QFileDialog.Options()
+        options |= QtWidgets.QFileDialog.ShowDirsOnly  # Set the option to show only directories
+
+        # Set the initial directory to your specified folder
+        folderPath = QtWidgets.QFileDialog.getExistingDirectory(self, "Open Folder", "/", options=options)
+        
+        if (self.nodeName.startswith("Campfire")):
+            print("Campfire")
+            # Access this node's fileCache
+            if(folderPath):
+                print(folderPath)
+        else:
+            print("FireSpread")
+            if(folderPath):
+                print(folderPath)
+                # Get access to the fire import's file cache node
+                fileCache = hou.node("/obj/" + self.nodeName + "/filecache1")
+                fileCache.parm('file').set(folderPath + "/$F.vdb")
+                fileCache.parm('execute').pressButton()
+
 
 class FireStarter(QtWidgets.QWidget):
-
     def __init__(self):
         if hasattr(self, 'ui'):
             return
@@ -60,17 +101,35 @@ class FireStarter(QtWidgets.QWidget):
         
         ## ---------- SPREAD UI SET-UP ------------------------- #
         self.ui.openFile.clicked.connect(self.openFile)
+        self.ui.createFireSpread.clicked.connect(self.createFireSim)
 
         # Initialize number of simulations
         self.simNumber = 0
+        self.spreadNumber = 0
 
         self.campfireDict = {}
-
-        # Set each menu initially disabled
-        # self.disableCampfireMenu()
+        self.spreadDict = {}
 
     def detectDeletion(self):
         print("Deletion Detected")
+
+    def findChildNode(self, nodeName):
+        # Start at object level
+        obj = hou.node("/obj/")
+        currentNode = obj
+
+        while currentNode:
+            enclosingNetwork = currentNode.parent()
+            print("Enclosing Network: " + enclosingNetwork.name())
+            if enclosingNetwork and enclosingNetwork.type().name() == enclosingNetwork:
+                # Search nodes within the network
+                foundNode = enclosingNetwork.node(nodeName)
+                if (foundNode):
+                    return foundNode
+            currentNode = enclosingNetwork
+        
+        return None
+
     
     def enableCampfireMenu(self):
         campfirePage = self.ui.stackedWidget.widget(0)
@@ -125,11 +184,16 @@ class FireStarter(QtWidgets.QWidget):
             self.ui.stackedWidget.setCurrentIndex(0)
 
     def buttonClicked(self):
-        # hou.hipFile.load(self.hip_file_path, suppress_save_prompt=True)
         self.simNumber += 1
         campfire = Campfire(self.simNumber)
         networkName = "Campfire_" + str(self.simNumber)
         self.campfireDict[networkName] = campfire
+
+        # Add the simulation to the list
+        newItem = QtWidgets.QListWidgetItem(self.ui.exportList)
+        custom = customItemWidget(networkName)
+        newItem.setSizeHint(custom.sizeHint())
+        self.ui.exportList.setItemWidget(newItem, custom)
 
     def getCampfireNode(self):
         nodes = hou.selectedNodes()
@@ -246,6 +310,47 @@ class FireStarter(QtWidgets.QWidget):
                 n.pyrobake.parm('firecolorramp2cg').set( (rgb[1]) / 255)
                 n.pyrobake.parm('firecolorramp2cb').set( (rgb[2]) / 255)
 
-def run():
+    def createFireSim(self, kwargs):
+        # Get the name of the node before creating the new nodes
+        nodes = hou.selectedNodes()
+        if len(nodes) != 1:
+            return None
+        
+        nodeName = nodes[0].name()
+
+        # Use the 'Fire Spread' shelf button
+        dopsparsepyrotools.createSpreadingFire(kwargs = {})
+
+        # Rename the created nodes to the proper name space so that they can be accessed
+        # sourceNode = self.findChildNode(nodeName)
+
+        sourceName = hou.node("/obj/" + nodeName + "_source")
+        print(nodes[0].path())
+        newSourceName = nodeName + "_source" + str(self.spreadNumber)
+        sourceName.setName(newSourceName) # This is the line that causes error when using with an imported file
+
+        fireSim = hou.node("/obj/fire_simulation")
+        newFireSim = "fire_simulation" + str(self.spreadNumber)
+        fireSim.setName(newFireSim)
+
+        fireImport = hou.node("/obj/fire_import")
+        newFireImport = "fire_import" + str(self.spreadNumber)
+        fireImport.setName(newFireImport)
+
+        # Create a new FireSpread object and add it to the map
+        self.spreadNumber += 1
+        fireSpread = FireSpread(nodeName, newSourceName, newFireSim, newFireImport)
+        fireSpread.convertVDB()
+
+        self.spreadDict[nodeName] = fireSpread
+
+        # Add a new item to export list
+                # Add the simulation to the layout
+        newItem = QtWidgets.QListWidgetItem(self.ui.exportList)
+        custom = customItemWidget(newFireImport)
+        newItem.setSizeHint(custom.sizeHint())
+        self.ui.exportList.setItemWidget(newItem, custom)
+
+def run():        
     win = FireStarter()
     win.show()
