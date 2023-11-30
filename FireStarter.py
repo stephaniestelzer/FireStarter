@@ -1,11 +1,55 @@
 import hou
+import dopsparsepyrotools
 from PySide2 import QtCore, QtUiTools, QtWidgets, QtGui
 from PySide2.QtGui import QColor
 
 from Campfire import Campfire
+from FireSpread import FireSpread
+
+class customItemWidget(QtWidgets.QWidget):
+    def __init__(self, path):
+        super().__init__()
+
+        self.nodePath = path
+
+        self.label = QtWidgets.QLabel(path)
+        self.button = QtWidgets.QPushButton("Export")
+        self.button.clicked.connect(self.exportSim)
+        layout = QtWidgets.QGridLayout(self)
+        self.setLayout(layout)
+        layout.addWidget(self.label, 0, 0)
+        layout.addWidget(self.button, 0, 1)
+
+    def sizeHint(self):
+        return self.minimumSizeHint()
+    
+    def exportSim(self):
+        print("connected")
+        options = QtWidgets.QFileDialog.Options()
+        options |= QtWidgets.QFileDialog.ShowDirsOnly  # Set the option to show only directories
+
+        # Set the initial directory to your specified folder
+        folderPath = QtWidgets.QFileDialog.getExistingDirectory(self, "Open Folder", "/", options=options)
+        
+        nodeStringSplit = self.nodePath.split("/")
+        rootName = '/'.join(nodeStringSplit[:-1])
+        print(rootName)
+        if (rootName.startswith("Campfire")):
+            print("Campfire")
+            # Access this node's fileCache
+            if(folderPath):
+                print(folderPath)
+        else:
+            print("FireSpread")
+            if(folderPath):
+                print(folderPath)
+                # Get access to the fire import's file cache node
+                fileCache = hou.node(self.nodePath + "/filecache1")
+                fileCache.parm('file').set(folderPath + "/$F.vdb")
+                fileCache.parm('execute').pressButton()
+
 
 class FireStarter(QtWidgets.QWidget):
-
     def __init__(self):
         if hasattr(self, 'ui'):
             return
@@ -60,17 +104,35 @@ class FireStarter(QtWidgets.QWidget):
         
         ## ---------- SPREAD UI SET-UP ------------------------- #
         self.ui.openFile.clicked.connect(self.openFile)
+        self.ui.createFireSpread.clicked.connect(self.createFireSim)
 
         # Initialize number of simulations
         self.simNumber = 0
+        self.spreadNumber = 0
 
-        self.fireList = []
-
-        # Set each menu initially disabled
-        # self.disableCampfireMenu()
+        self.campfireDict = {}
+        self.spreadDict = {}
 
     def detectDeletion(self):
         print("Deletion Detected")
+
+    def findChildNode(self, nodeName):
+        # Start at object level
+        obj = hou.node("/obj/")
+        currentNode = obj
+
+        while currentNode:
+            enclosingNetwork = currentNode.parent()
+            print("Enclosing Network: " + enclosingNetwork.name())
+            if enclosingNetwork and enclosingNetwork.type().name() == enclosingNetwork:
+                # Search nodes within the network
+                foundNode = enclosingNetwork.node(nodeName)
+                if (foundNode):
+                    return foundNode
+            currentNode = enclosingNetwork
+        
+        return None
+
     
     def enableCampfireMenu(self):
         campfirePage = self.ui.stackedWidget.widget(0)
@@ -125,107 +187,178 @@ class FireStarter(QtWidgets.QWidget):
             self.ui.stackedWidget.setCurrentIndex(0)
 
     def buttonClicked(self):
-        # hou.hipFile.load(self.hip_file_path, suppress_save_prompt=True)
         self.simNumber += 1
         campfire = Campfire(self.simNumber)
-        self.fireList.append(campfire)
+        networkName = "Campfire_" + str(self.simNumber)
+        self.campfireDict[networkName] = campfire
 
+        # Add the simulation to the list
+        newItem = QtWidgets.QListWidgetItem(self.ui.exportList)
+        custom = customItemWidget(networkName)
+        newItem.setSizeHint(custom.sizeHint())
+        self.ui.exportList.setItemWidget(newItem, custom)
+
+    def getCampfireNode(self):
+        nodes = hou.selectedNodes()
+        if len(nodes) != 1:
+            return None
+        
+        nodeName = nodes[0].name()
+        campfireNode = self.campfireDict[nodeName]
+        return campfireNode
 
 
     def adjustCompactness(self):
-        nodes = hou.selectedNodes()
-        print(nodes[0])
         value = (self.ui.compactnessSlider.value() / 10.0)
-        print(value)
-        if value == 0:
-            self.pyrosolver.parm('enable_viscosity').set(False)
-        else:
-            self.pyrosolver.parm('enable_viscosity').set(True)
-            self.pyrosolver.parm('viscosity').set(value / 10)
+        i = self.getCampfireNode()
+        if i != None:
+            if value == 0:
+                i.pyrosolver.parm('enable_viscosity').set(False)
+            else:
+                i.pyrosolver.parm('enable_viscosity').set(True)
+                i.pyrosolver.parm('viscosity').set(value / 10)
 
 
     def adjustBrightness(self):
-        value = (self.ui.brightnessSlider.value() / 100.0)
-        brightness = value * (4950 / 49)
+        n = self.getCampfireNode()
+        if (n != None):
+            value = (self.ui.brightnessSlider.value() / 100.0)
+            brightness = value * (4950 / 49)
 
-        if brightness == 0:
-            self.pyrobake.parm('kfire').set(1)
-        else:
-            self.pyrobake.parm('kfire').set(brightness)
+            if brightness == 0:
+                n.pyrobake.parm('kfire').set(1)
+            else:
+                n.pyrobake.parm('kfire').set(brightness)
 
-        print(brightness)
+            print(brightness)
     
     def adjustHeight(self):
-        value = self.ui.heightSlider.value()
+        n = self.getCampfireNode()
+        if n != None:
+            value = self.ui.heightSlider.value()
 
-        # Multiply the slider by the ratio to get the Temperature Scale value
-        tempValue = value * (169/9900)
+            # Multiply the slider by the ratio to get the Temperature Scale value
+            tempValue = value * (169/9900)
 
-        # Account for edge cases
-        if value == 0:
-            tempValue = 0.01
-        if value == 99:
-            tempValue = 1.7
+            # Account for edge cases
+            if value == 0:
+                tempValue = 0.01
+            if value == 99:
+                tempValue = 1.7
 
-        self.pyrosolver.parm('source_vscale2').set(tempValue)
+            n.pyrosolver.parm('source_vscale2').set(tempValue)
 
     def setEndframe(self):
+        n = self.getCampfireNode()
         # If steady burn is checked... do nothing
-        if self.ui.burnCheckBox.isChecked():
-            print("Steady burn is checked -- unable to set frame range")
-            return
-        else:
-            # Check for a valid input
-            input = self.ui.endFrame.text()
-            try:
-                self.endFrame = int(input)
-                self.pyrosolver.parm('srcframerangemax').set(self.endFrame)
-            except ValueError:
-                self.ui.endFrame.setText(str(self.endFrame))
+        if n != None:
+            if self.ui.burnCheckBox.isChecked():
+                print("Steady burn is checked -- unable to set frame range")
+                return
+            else:
+                # Check for a valid input
+                input = self.ui.endFrame.text()
+                try:
+                    self.endFrame = int(input)
+                    n.pyrosolver.parm('srcframerangemax').set(self.endFrame)
+                except ValueError:
+                    self.ui.endFrame.setText(str(self.endFrame))
 
     def setStartframe(self):
-        # If steady burn is checked... do nothing
-        if self.ui.burnCheckBox.isChecked():
-            print("Steady burn is checked -- unable to set frame range")
-            return
-        else:
-            # Check for a valid input
-            input = self.ui.startFrame.text()
-            try:
-                self.startFrame = int(input)
-                self.pyrosolver.parm('srcframerangemin').set(self.startFrame)
-            except ValueError:
-                self.ui.startFrame.setText(str(self.startFrame))
+        n = self.getCampfireNode()
+        if n != None:
+            # If steady burn is checked... do nothing
+            if self.ui.burnCheckBox.isChecked():
+                print("Steady burn is checked -- unable to set frame range")
+                return
+            else:
+                # Check for a valid input
+                input = self.ui.startFrame.text()
+                try:
+                    self.startFrame = int(input)
+                    self.pyrosolver.parm('srcframerangemin').set(self.startFrame)
+                except ValueError:
+                    self.ui.startFrame.setText(str(self.startFrame))
 
 
     def steadyBurnToggle(self):
-        if self.ui.burnCheckBox.isChecked():
-            # Don't limit the frame range
-            self.pyrosolver.parm('srclimitframerange').set(False)
-            self.ui.startFrame.setText("")
-            self.ui.endFrame.setText("")
+        n = self.getCampfireNode()
+        if n != None:
+            if self.ui.burnCheckBox.isChecked():
+                # Don't limit the frame range
+                n.pyrosolver.parm('srclimitframerange').set(False)
+                self.ui.startFrame.setText("")
+                self.ui.endFrame.setText("")
 
-        else: 
-            self.pyrosolver.parm('srclimitframerange').set(True)
-            # Set start and end frames
-            self.pyrosolver.parm('srcframerangemin').set(self.startFrame)
-            self.pyrosolver.parm('srcframerangemax').set(self.endFrame)
-            # Set the frame range to the previous number of frames
-            self.ui.startFrame.setText(str(self.startFrame))
-            self.ui.endFrame.setText(str(self.endFrame))
+            else: 
+                n.pyrosolver.parm('srclimitframerange').set(True)
+                # Set start and end frames
+                n.pyrosolver.parm('srcframerangemin').set(self.startFrame)
+                n.pyrosolver.parm('srcframerangemax').set(self.endFrame)
+                # Set the frame range to the previous number of frames
+                self.ui.startFrame.setText(str(self.startFrame))
+                self.ui.endFrame.setText(str(self.endFrame))
 
     def changeFireColor(self):
-        color = QtWidgets.QColorDialog().getColor()
-        if color.isValid():
-            # Returns hex code of selected color
-            hexColor = color.name().lstrip("#")
-            print(hexColor)
-            rgb = tuple(int(hexColor[i:i+2], 16) for i in (0, 2, 4))
-            print(rgb)
-            self.pyrobake.parm('firecolorramp2cr').set( (rgb[0]) / 255)
-            self.pyrobake.parm('firecolorramp2cg').set( (rgb[1]) / 255)
-            self.pyrobake.parm('firecolorramp2cb').set( (rgb[2]) / 255)
+        n = self.getCampfireNode()
+        if n != None:
+            color = QtWidgets.QColorDialog().getColor()
+            if color.isValid():
+                # Returns hex code of selected color
+                hexColor = color.name().lstrip("#")
+                print(hexColor)
+                rgb = tuple(int(hexColor[i:i+2], 16) for i in (0, 2, 4))
+                print(rgb)
+                n.pyrobake.parm('firecolorramp2cr').set( (rgb[0]) / 255)
+                n.pyrobake.parm('firecolorramp2cg').set( (rgb[1]) / 255)
+                n.pyrobake.parm('firecolorramp2cb').set( (rgb[2]) / 255)
 
-def run():
+    def createFireSim(self, kwargs):
+        # Get the name of the node before creating the new nodes
+        nodes = hou.selectedNodes()
+        if len(nodes) != 1:
+            return None
+        
+        nodeName = nodes[0].name()
+
+        # Use the 'Fire Spread' shelf button
+        dopsparsepyrotools.createSpreadingFire(kwargs = {})
+
+        # Rename the created nodes to the proper name space so that they can be accessed
+        # sourceNode = self.findChildNode(nodeName)
+
+        sourceName = hou.node(nodes[0].path() + "_source")
+        print("Source Name: " + sourceName.path())
+        newSourceName = nodeName + "_source" + str(self.spreadNumber)
+        sourceName.setName(newSourceName) # This is the line that causes error when using with an imported file
+
+        # Splitting the selected node path for parsing
+        nodePath = nodes[0].path()
+        pathSplit = nodePath.split("/")
+        hiearchyString = '/'.join(pathSplit[:-1])
+
+        # Hierarchy string now contains the parent network of the node
+        fireSim = hou.node(hiearchyString + "/fire_simulation")
+        newFireSim = "fire_simulation" + str(self.spreadNumber)
+        fireSim.setName(newFireSim)
+
+        fireImport = hou.node(hiearchyString + "/fire_import")
+        newFireImport = "fire_import" + str(self.spreadNumber)
+        fireImport.setName(newFireImport)
+
+        # Create a new FireSpread object and add it to the map
+        self.spreadNumber += 1
+        fireSpread = FireSpread(nodeName, sourceName, fireSim, fireImport)
+        fireSpread.convertVDB()
+
+        self.spreadDict[nodeName] = fireSpread
+
+        # Add a new item to export list
+        newItem = QtWidgets.QListWidgetItem(self.ui.exportList)
+        custom = customItemWidget(fireImport.path())
+        newItem.setSizeHint(custom.sizeHint())
+        self.ui.exportList.setItemWidget(newItem, custom)
+
+def run():        
     win = FireStarter()
     win.show()

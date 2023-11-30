@@ -5,7 +5,6 @@ class Campfire():
             super(Campfire, self).__init__()
             
             self.networkName = "Campfire_" + str(num)
-            print(self.networkName)
             self.campfire = hou.node("/obj").createNode("geo")
             self.campfire.setName(self.networkName)
 
