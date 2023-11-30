@@ -10,18 +10,18 @@ class FireSpread():
             self.fireImport = fireImport
 
         def convertVDB(self):
-            convertVDB = hou.node("/obj/" + self.fireImport).createNode("convertvdb")
+            convertVDB = self.fireImport.createNode("convertvdb")
             convertVDB.parm('group').set("@name=density @name=flame @name=temperature @name=vel.x @name=vel.y @name=vel.z")
             convertVDB.parm('conversion').set(1)
 
             # Get the post process node and set its input to the convertVDB node
-            postProcess = hou.node("/obj/" + self.fireImport + "/post_process")
+            postProcess = hou.node(self.fireImport.path() + "/post_process")
             convertVDB.setInput(0, postProcess)
 
-            self.fileCache = hou.node("/obj/" + self.fireImport).createNode("filecache")
+            self.fileCache = self.fireImport.createNode("filecache")
             self.fileCache.parm('filemethod').set(1)
             self.fileCache.setInput(0, convertVDB)
 
             # Layout the network
-            hou.node("/obj/" + self.fireImport).layoutChildren()
+            self.fireImport.layoutChildren()
 

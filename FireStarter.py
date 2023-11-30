@@ -7,12 +7,12 @@ from Campfire import Campfire
 from FireSpread import FireSpread
 
 class customItemWidget(QtWidgets.QWidget):
-    def __init__(self, name):
+    def __init__(self, path):
         super().__init__()
 
-        self.nodeName = name
+        self.nodePath = path
 
-        self.label = QtWidgets.QLabel(name)
+        self.label = QtWidgets.QLabel(path)
         self.button = QtWidgets.QPushButton("Export")
         self.button.clicked.connect(self.exportSim)
         layout = QtWidgets.QGridLayout(self)
@@ -31,7 +31,10 @@ class customItemWidget(QtWidgets.QWidget):
         # Set the initial directory to your specified folder
         folderPath = QtWidgets.QFileDialog.getExistingDirectory(self, "Open Folder", "/", options=options)
         
-        if (self.nodeName.startswith("Campfire")):
+        nodeStringSplit = self.nodePath.split("/")
+        rootName = '/'.join(nodeStringSplit[:-1])
+        print(rootName)
+        if (rootName.startswith("Campfire")):
             print("Campfire")
             # Access this node's fileCache
             if(folderPath):
@@ -41,7 +44,7 @@ class customItemWidget(QtWidgets.QWidget):
             if(folderPath):
                 print(folderPath)
                 # Get access to the fire import's file cache node
-                fileCache = hou.node("/obj/" + self.nodeName + "/filecache1")
+                fileCache = hou.node(self.nodePath + "/filecache1")
                 fileCache.parm('file').set(folderPath + "/$F.vdb")
                 fileCache.parm('execute').pressButton()
 
@@ -324,30 +327,35 @@ class FireStarter(QtWidgets.QWidget):
         # Rename the created nodes to the proper name space so that they can be accessed
         # sourceNode = self.findChildNode(nodeName)
 
-        sourceName = hou.node("/obj/" + nodeName + "_source")
-        print(nodes[0].path())
+        sourceName = hou.node(nodes[0].path() + "_source")
+        print("Source Name: " + sourceName.path())
         newSourceName = nodeName + "_source" + str(self.spreadNumber)
         sourceName.setName(newSourceName) # This is the line that causes error when using with an imported file
 
-        fireSim = hou.node("/obj/fire_simulation")
+        # Splitting the selected node path for parsing
+        nodePath = nodes[0].path()
+        pathSplit = nodePath.split("/")
+        hiearchyString = '/'.join(pathSplit[:-1])
+
+        # Hierarchy string now contains the parent network of the node
+        fireSim = hou.node(hiearchyString + "/fire_simulation")
         newFireSim = "fire_simulation" + str(self.spreadNumber)
         fireSim.setName(newFireSim)
 
-        fireImport = hou.node("/obj/fire_import")
+        fireImport = hou.node(hiearchyString + "/fire_import")
         newFireImport = "fire_import" + str(self.spreadNumber)
         fireImport.setName(newFireImport)
 
         # Create a new FireSpread object and add it to the map
         self.spreadNumber += 1
-        fireSpread = FireSpread(nodeName, newSourceName, newFireSim, newFireImport)
+        fireSpread = FireSpread(nodeName, sourceName, fireSim, fireImport)
         fireSpread.convertVDB()
 
         self.spreadDict[nodeName] = fireSpread
 
         # Add a new item to export list
-                # Add the simulation to the layout
         newItem = QtWidgets.QListWidgetItem(self.ui.exportList)
-        custom = customItemWidget(newFireImport)
+        custom = customItemWidget(fireImport.path())
         newItem.setSizeHint(custom.sizeHint())
         self.ui.exportList.setItemWidget(newItem, custom)
 
