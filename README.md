@@ -9,7 +9,28 @@ Target Users are...
 - Small Studios and Independent Creators who need fire for a shot, but don't have any VFX knowledge
 
 ## How to use this tool
+### Tutorials
+### Shelf Button Code
+```python
+import sys
+sys.path.append("/path/to/folder/FireStarter")
 
+from FireStarter import FireStarter
+
+# Create an instance of the FireStarter class
+fire_starter_instance = FireStarter()
+
+# Call the run method to set up the UI and show the window
+def run():
+    win = FireStarter()
+    win.show()
+    
+# Call the run method to set up the UI and show the window
+def run():
+    win = FireStarter()
+    win.show()
+    
+run()
 
 ## Blog Posts
 Throughout the development of this project, I wrote about my progress. These blogs are short and not very detailed, but they give an overview of what was accomplished each week and what I planned to get done the next week.
@@ -25,3 +46,4 @@ Throughout the development of this project, I wrote about my progress. These blo
 - [Week 8](https://medium.com/@stephanie_62822/senior-project-part-7-exporting-houdini-simulations-e4ae8905c712)
 - [Week 9](https://medium.com/@stephanie_62822/senior-project-part-8-entering-maya-9c2a8639c32b)
 - [Week 10]()
+
