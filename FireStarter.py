@@ -57,7 +57,14 @@ class FireStarter(QtWidgets.QWidget):
             return
         
         super(FireStarter, self).__init__()
-        ui_file = '/Users/stephaniestelzer/Documents/HoudiniPlugins/FireStarter/SmallerUI.ui'
+        cdir = os.getcwd() 
+        #V print("Current Directory: ", cdir) 
+        path = os.path.abspath(__file__).split("/")
+        rootName = '/'.join(path[:-1])
+
+        ui_file = rootName + '/SmallerUI.ui'
+        print("Root File: " + rootName)
+        print("UI File: " + ui_file)
         self.ui = QtUiTools.QUiLoader().load(ui_file, parentWidget=self)
         self.setParent(hou.ui.mainQtWindow(), QtCore.Qt.Window)
 
@@ -98,7 +105,7 @@ class FireStarter(QtWidgets.QWidget):
         # Get path of current directory
         script_directory = os.path.dirname(os.path.abspath(__file__))
 
-        self.colorIcon = QtGui.QIcon(script_directory + "/icon-color-smart.png")
+        self.colorIcon = QtGui.QIcon(rootName + "/images/icon-color-smart.png")
         self.ui.colorChoose.setIconSize(QtCore.QSize(64, 64))
         self.ui.colorChoose.setIcon(self.colorIcon)
 
