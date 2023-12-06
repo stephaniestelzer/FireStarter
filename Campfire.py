@@ -8,7 +8,6 @@ class Campfire():
             self.campfire = hou.node("/obj").createNode("geo")
             self.campfire.setName(self.networkName)
 
-
             # Create the torus and set up the animation
             self.sourceGeo = self.campfire.createNode("torus")
             self.sourceGeo.parm('radx').set(0.5)
@@ -114,13 +113,9 @@ class Campfire():
             # Set initial temperature scale
             self.pyrosolver.parm('source_vscale2').set(0.01)
 
-            # Create Convertvdb
-            self.convertvdb = self.campfire.createNode('convertvdb')
-            self.convertvdb.setInput(0, self.pyrosolver)
-
             # Create Pyrobakevolume
             self.pyrobake = self.campfire.createNode('pyrobakevolume')
-            self.pyrobake.setInput(0, self.convertvdb)
+            self.pyrobake.setInput(0, self.pyrosolver)
             self.pyrobake.parm('enablefire').set(True)
             self.pyrobake.parm('kfire').set(1)
 
@@ -131,10 +126,21 @@ class Campfire():
             self.pyrobake.parm('firecolorramp1cb').set(0.001)
             self.pyrobake.parm('densityscale').set(0.02)
 
+            # Change the bindings to match the pyrosolver -- this still isn't getting the color to show up in Maya
+            self.pyrobake.parm('firek_volumename').set("flame")
+            self.pyrobake.parm('firecolor_volumename').set("flame")
+            self.pyrobake.setDisplayFlag(True)
 
-            # Create output
-            self.output = self.campfire.createNode('output')
-            self.output.setInput(0, self.pyrobake)
+            # Create Convertvdb
+            self.convertvdb = self.campfire.createNode('convertvdb')
+            self.convertvdb.setInput(0, self.pyrobake)
+            self.convertvdb.parm('group').set("@name=density @name=flame @name=temperature @name=vel.x @name=vel.y @name=vel.z")
+            self.convertvdb.parm('conversion').set(1)
+
+            # Create filecache
+            self.fileCache = self.campfire.createNode("filecache")
+            self.fileCache.parm('filemethod').set(1)
+            self.fileCache.setInput(0, self.convertvdb)
 
             # Layout all nodes in the network
             self.campfire.layoutChildren()

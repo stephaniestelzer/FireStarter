@@ -25,3 +25,12 @@ class FireSpread():
             # Layout the network
             self.fireImport.layoutChildren()
 
+        def setSpeed(self, speed):
+            print(self.source.path() + "/simulate_spread")
+            spreadNode = hou.node(self.source.path() + "/simulate_spread")
+            spreadNode.parm('diff_rate').set(speed)
+            
+        def setStartFrame(self, frame):
+            print(self.source.path() + "/simulate_spread")
+            spreadNode = hou.node(self.source.path() + "/simulate_spread")
+            spreadNode.parm('startframe').set(frame)

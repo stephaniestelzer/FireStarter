@@ -1,3 +1,4 @@
+import os
 import hou
 import dopsparsepyrotools
 from PySide2 import QtCore, QtUiTools, QtWidgets, QtGui
@@ -24,7 +25,6 @@ class customItemWidget(QtWidgets.QWidget):
         return self.minimumSizeHint()
     
     def exportSim(self):
-        print("connected")
         options = QtWidgets.QFileDialog.Options()
         options |= QtWidgets.QFileDialog.ShowDirsOnly  # Set the option to show only directories
 
@@ -33,14 +33,16 @@ class customItemWidget(QtWidgets.QWidget):
         
         nodeStringSplit = self.nodePath.split("/")
         rootName = '/'.join(nodeStringSplit[:-1])
-        print(rootName)
-        if (rootName.startswith("Campfire")):
-            print("Campfire")
+
+        if (self.nodePath.startswith("Campfire")):
             # Access this node's fileCache
             if(folderPath):
+                # Get access to the fire import's file cache node
                 print(folderPath)
+                fileCache = hou.node("/obj/" + self.nodePath + "/filecache1")
+                fileCache.parm('file').set(folderPath + "/$F.vdb")
+                fileCache.parm('execute').pressButton()
         else:
-            print("FireSpread")
             if(folderPath):
                 print(folderPath)
                 # Get access to the fire import's file cache node
@@ -93,6 +95,13 @@ class FireStarter(QtWidgets.QWidget):
         self.ui.simulationType.addItems(['Campfire', 'Spread', 'Export'])
         self.ui.simulationType.currentIndexChanged.connect(self.changeUI)
 
+        # Get path of current directory
+        script_directory = os.path.dirname(os.path.abspath(__file__))
+
+        self.colorIcon = QtGui.QIcon(script_directory + "/icon-color-smart.png")
+        self.ui.colorChoose.setIconSize(QtCore.QSize(64, 64))
+        self.ui.colorChoose.setIcon(self.colorIcon)
+
         # Set-up color picker
         self.ui.colorChoose.clicked.connect(self.changeFireColor)
 
@@ -106,6 +115,11 @@ class FireStarter(QtWidgets.QWidget):
         self.ui.openFile.clicked.connect(self.openFile)
         self.ui.createFireSpread.clicked.connect(self.createFireSim)
 
+        self.ui.spreadSpeed.valueChanged[int].connect(self.setSpreadSpeed)
+
+        self.ui.spreadStart.returnPressed.connect(self.spreadStartFrame)
+        self.ui.spreadStart.editingFinished.connect(self.spreadStartFrame)
+
         # Initialize number of simulations
         self.simNumber = 0
         self.spreadNumber = 0
@@ -116,23 +130,17 @@ class FireStarter(QtWidgets.QWidget):
     def detectDeletion(self):
         print("Deletion Detected")
 
-    def findChildNode(self, nodeName):
-        # Start at object level
-        obj = hou.node("/obj/")
-        currentNode = obj
+    def setSpreadSpeed(self):
+        # get the spread node
+        value = (self.ui.spreadSpeed.value() / 10.0)
+        value += 1
+        i = self.getSpreadNode()
+        i.setSpeed(value)
 
-        while currentNode:
-            enclosingNetwork = currentNode.parent()
-            print("Enclosing Network: " + enclosingNetwork.name())
-            if enclosingNetwork and enclosingNetwork.type().name() == enclosingNetwork:
-                # Search nodes within the network
-                foundNode = enclosingNetwork.node(nodeName)
-                if (foundNode):
-                    return foundNode
-            currentNode = enclosingNetwork
-        
-        return None
-
+    def spreadStartFrame(self):
+        input = self.ui.spreadStart.text()
+        i = self.getSpreadNode()
+        i.setStartFrame(int(input))
     
     def enableCampfireMenu(self):
         campfirePage = self.ui.stackedWidget.widget(0)
@@ -147,16 +155,6 @@ class FireStarter(QtWidgets.QWidget):
             if str(widget.objectName()) not in excludedName:
                 print("Accessed")
                 widget.setEnabled(False)
-            
-    def enableSpreadMenu(self):
-        print("Not Accessible Yet")
-
-    def disableSpreadMenu(self):
-        print("Not Accessible Yet")
-
-
-    def selectionChangedCallback(self):
-        print("Selection")
 
     def openFile(self):
         options = QtWidgets.QFileDialog.Options()
@@ -175,7 +173,6 @@ class FireStarter(QtWidgets.QWidget):
                 # Create USD Import node
                 usdImportNode = geomNode.createNode("usdimport")
                 usdImportNode.parm("filepath1").set(file_path)
-
 
     def changeUI(self):
         page = self.ui.simulationType.currentText()
@@ -207,6 +204,14 @@ class FireStarter(QtWidgets.QWidget):
         campfireNode = self.campfireDict[nodeName]
         return campfireNode
 
+    def getSpreadNode(self):
+        nodes = hou.selectedNodes()
+        if len(nodes) != 1:
+            return None
+        
+        nodeName = nodes[0].name()
+        spreadNode = self.spreadDict[nodeName]
+        return spreadNode
 
     def adjustCompactness(self):
         value = (self.ui.compactnessSlider.value() / 10.0)
@@ -300,6 +305,7 @@ class FireStarter(QtWidgets.QWidget):
                 self.ui.endFrame.setText(str(self.endFrame))
 
     def changeFireColor(self):
+        print("Accessed")
         n = self.getCampfireNode()
         if n != None:
             color = QtWidgets.QColorDialog().getColor()
@@ -323,9 +329,6 @@ class FireStarter(QtWidgets.QWidget):
 
         # Use the 'Fire Spread' shelf button
         dopsparsepyrotools.createSpreadingFire(kwargs = {})
-
-        # Rename the created nodes to the proper name space so that they can be accessed
-        # sourceNode = self.findChildNode(nodeName)
 
         sourceName = hou.node(nodes[0].path() + "_source")
         print("Source Name: " + sourceName.path())
