@@ -31,6 +31,7 @@ def run():
     win.show()
     
 run()
+```
 
 ## Blog Posts
 Throughout the development of this project, I wrote about my progress. These blogs are short and not very detailed, but they give an overview of what was accomplished each week and what I planned to get done the next week.
