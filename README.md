@@ -13,7 +13,8 @@ If you want to export your simulation into Maya, you MUST use the arnold rendere
 
 ## How to use this tool
 ### Tutorials
-- [Set-Up and Campfire UI](https://youtu.be/b1Oej8WvssQ)
+- [Tool Set-up and Campfire UI](https://youtu.be/CZXO4NRtCm8)
+- [Simulation Set-Up in Maya](https://youtu.be/b1Oej8WvssQ)
 
 ### Shelf Button Code
 ```python
