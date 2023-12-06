@@ -14,6 +14,7 @@ If you want to export your simulation into Maya, you MUST use the arnold rendere
 ## How to use this tool
 ### Tutorials
 - [Tool Set-up and Campfire UI](https://youtu.be/CZXO4NRtCm8)
+- [Spread Simulation UI and Exporting VDBs to Maya](https://youtu.be/yHrqNratg2E)
 - [Simulation Set-Up in Maya](https://youtu.be/b1Oej8WvssQ)
 
 ### Shelf Button Code
