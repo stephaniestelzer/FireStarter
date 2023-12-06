@@ -8,6 +8,9 @@ Target Users are...
 - Previsualization Artists who want to quickly incorporate fire into their scene
 - Small Studios and Independent Creators who need fire for a shot, but don't have any VFX knowledge
 
+### Important Info
+If you want to export your simulation into Maya, you MUST use the arnold renderer for your simulation to render properly.
+
 ## How to use this tool
 ### Tutorials
 ### Shelf Button Code
