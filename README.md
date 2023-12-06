@@ -48,3 +48,8 @@ Throughout the development of this project, I wrote about my progress. These blo
 - [Week 9](https://medium.com/@stephanie_62822/senior-project-part-8-entering-maya-9c2a8639c32b)
 - [Week 10]()
 
+## Checkpoint Presentations
+At each stage in the development of the project, I was required to present my work.
+- [Presentation 1](https://youtu.be/qnxkMSGvDfw)
+- [Presentation 2](https://youtu.be/kaGZRh-jkvU)
+- [Final Presentation]
